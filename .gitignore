@@ -14,3 +14,6 @@ VersMonTel/
 .DS_Store
 desktop.ini
 Thumbs.db
+
+# Lanceur local (chemins absolus specifiques a la machine)
+demarrer_en_arriere_plan.vbs
