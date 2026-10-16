@@ -1,0 +1,16 @@
+# Secrets
+.env
+
+# Environnement Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Dossier surveillé (fichiers personnels)
+VersMonTel/
+
+# Système
+.DS_Store
+desktop.ini
+Thumbs.db
