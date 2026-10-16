@@ -45,3 +45,17 @@ il part automatiquement sur Telegram.
 
 - Surveillance non récursive (dossier de premier niveau uniquement).
 - Une pause de 2 s laisse le temps aux gros fichiers de finir d'être écrits.
+
+## Démarrage automatique (Windows)
+
+Pour que le surveillant tourne en permanence sans avoir à le lancer à la main :
+
+- **Installer** : double-cliquez sur `installer_demarrage.bat`.
+  Cela crée une tâche planifiée qui démarre le script **à chaque ouverture de
+  session**, en arrière-plan et **sans fenêtre** (via `pythonw.exe`), et le lance
+  immédiatement.
+- **Désinstaller** : double-cliquez sur `desinstaller_demarrage.bat`.
+
+Prérequis : avoir renseigné `TELEGRAM_TOKEN` et `TELEGRAM_CHAT_ID` dans `.env`
+(voir `.env.example`). Si la création de la tâche échoue, relancez le `.bat` en
+tant qu'administrateur (clic droit → Exécuter en tant qu'administrateur).
