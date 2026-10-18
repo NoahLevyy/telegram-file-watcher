@@ -578,6 +578,102 @@ class VersMonTelHandler(FileSystemEventHandler):
 observer = None
 
 
+# =====================================================================
+#  Détection verrouillage / déverrouillage de la session Windows
+# =====================================================================
+
+def session_watcher(app: Application, loop: asyncio.AbstractEventLoop):
+    """
+    Écoute les événements de session Windows et notifie sur Telegram au
+    déverrouillage (retour sur le PC après l'écran de verrouillage).
+    Tout est défini localement pour que le module reste importable hors Windows.
+    """
+    if not IS_WINDOWS:
+        return
+
+    LRESULT = ctypes.c_ssize_t
+    HWND = ctypes.c_void_p
+    UINT = ctypes.c_uint
+    WPARAM = ctypes.c_size_t
+    LPARAM = ctypes.c_ssize_t
+    WNDPROC = ctypes.WINFUNCTYPE(LRESULT, HWND, UINT, WPARAM, LPARAM)
+
+    WM_WTSSESSION_CHANGE = 0x02B1
+    WTS_SESSION_LOCK = 0x7
+    WTS_SESSION_UNLOCK = 0x8
+    NOTIFY_FOR_THIS_SESSION = 0
+    HWND_MESSAGE = ctypes.c_void_p(-3)
+
+    user32 = ctypes.windll.user32
+    kernel32 = ctypes.windll.kernel32
+    wtsapi32 = ctypes.windll.wtsapi32
+
+    user32.DefWindowProcW.restype = LRESULT
+    user32.DefWindowProcW.argtypes = [HWND, UINT, WPARAM, LPARAM]
+    user32.CreateWindowExW.restype = HWND
+    user32.CreateWindowExW.argtypes = [ctypes.c_uint, ctypes.c_wchar_p, ctypes.c_wchar_p,
+                                       ctypes.c_uint, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+                                       ctypes.c_int, HWND, ctypes.c_void_p, ctypes.c_void_p,
+                                       ctypes.c_void_p]
+    kernel32.GetModuleHandleW.restype = ctypes.c_void_p
+    kernel32.GetModuleHandleW.argtypes = [ctypes.c_wchar_p]
+    wtsapi32.WTSRegisterSessionNotification.restype = ctypes.c_int
+    wtsapi32.WTSRegisterSessionNotification.argtypes = [HWND, ctypes.c_uint]
+
+    async def notify_unlock():
+        heure = datetime.now().strftime("%H:%M")
+        try:
+            await app.bot.send_message(
+                CHAT_ID, f"🔓 {socket.gethostname()} déverrouillé ({heure}).")
+        except Exception as e:
+            log.warning("Notif déverrouillage non envoyée : %s", e)
+
+    def wndproc(hwnd, msg, wparam, lparam):
+        if msg == WM_WTSSESSION_CHANGE:
+            if wparam == WTS_SESSION_UNLOCK:
+                log.info("Session déverrouillée")
+                asyncio.run_coroutine_threadsafe(notify_unlock(), loop)
+            elif wparam == WTS_SESSION_LOCK:
+                log.info("Session verrouillée")
+        return user32.DefWindowProcW(hwnd, msg, wparam, lparam)
+
+    class WNDCLASS(ctypes.Structure):
+        _fields_ = [("style", UINT), ("lpfnWndProc", WNDPROC),
+                    ("cbClsExtra", ctypes.c_int), ("cbWndExtra", ctypes.c_int),
+                    ("hInstance", ctypes.c_void_p), ("hIcon", ctypes.c_void_p),
+                    ("hCursor", ctypes.c_void_p), ("hbrBackground", ctypes.c_void_p),
+                    ("lpszMenuName", ctypes.c_wchar_p), ("lpszClassName", ctypes.c_wchar_p)]
+
+    class MSG(ctypes.Structure):
+        _fields_ = [("hwnd", HWND), ("message", UINT), ("wParam", WPARAM),
+                    ("lParam", LPARAM), ("time", ctypes.c_uint),
+                    ("pt_x", ctypes.c_long), ("pt_y", ctypes.c_long)]
+
+    proc = WNDPROC(wndproc)  # garder une référence vivante (sinon crash)
+    try:
+        hinst = kernel32.GetModuleHandleW(None)
+        wc = WNDCLASS()
+        wc.lpfnWndProc = proc
+        wc.hInstance = hinst
+        wc.lpszClassName = "AssistantTelegramSessionWatcher"
+        user32.RegisterClassW(ctypes.byref(wc))
+        hwnd = user32.CreateWindowExW(0, wc.lpszClassName, "watcher", 0, 0, 0, 0, 0,
+                                      HWND_MESSAGE, None, hinst, None)
+        if not hwnd:
+            log.warning("Watcher session : fenêtre non créée (err %s)", kernel32.GetLastError())
+            return
+        if not wtsapi32.WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION):
+            log.warning("Watcher session : abonnement échoué (err %s)", kernel32.GetLastError())
+            return
+        log.info("Watcher session (verrouillage/déverrouillage) actif.")
+        msg = MSG()
+        while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
+            user32.TranslateMessage(ctypes.byref(msg))
+            user32.DispatchMessageW(ctypes.byref(msg))
+    except Exception as e:
+        log.warning("Watcher session arrêté : %s", e)
+
+
 async def post_init(app: Application):
     global observer
     WATCH_DIRECTORY.mkdir(parents=True, exist_ok=True)
@@ -585,6 +681,8 @@ async def post_init(app: Application):
     observer = Observer()
     observer.schedule(VersMonTelHandler(app, asyncio.get_running_loop()), str(WATCH_DIRECTORY), recursive=False)
     observer.start()
+    threading.Thread(target=session_watcher, args=(app, asyncio.get_running_loop()),
+                     daemon=True).start()
     try:
         await app.bot.set_my_commands([BotCommand(c, d) for c, d in MENU])
         heure = datetime.now().strftime("%H:%M")
