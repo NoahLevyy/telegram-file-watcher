@@ -7,8 +7,10 @@ venv/
 __pycache__/
 *.py[cod]
 
-# Dossier surveillé (fichiers personnels)
+# Dossiers d'échange (fichiers personnels) et journal
 VersMonTel/
+DepuisMonTel/
+assistant.log*
 
 # Système
 .DS_Store

@@ -1,3 +1,5 @@
 python-telegram-bot>=21
 watchdog>=4
 python-dotenv>=1
+mss>=9
+opencv-python-headless>=4
