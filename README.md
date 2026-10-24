@@ -28,7 +28,9 @@ Petit utilitaire Python qui relie ton PC à ton téléphone via un bot Telegram 
 | `/popup texte` | affiche un message à l'écran du PC |
 | `/aide` | liste des commandes |
 
-Notification automatique : à chaque allumage du PC (ouverture de session), le bot t'envoie « 🟢 … est allumé » avec le niveau de batterie et l'IP locale.
+Notifications automatiques :
+- à chaque **allumage** du PC (ouverture de session) : « 🟢 … est allumé » avec batterie et IP ;
+- à chaque **déverrouillage** (retour sur le PC après l'écran de verrouillage) : « 🔓 … déverrouillé ».
 
 Sécurité : le bot **n'obéit qu'au chat défini par `TELEGRAM_CHAT_ID`**. Les
 commandes reçues plus de 2 minutes après leur envoi (PC éteint à ce moment-là)
@@ -81,19 +83,15 @@ Une seule instance peut tourner à la fois. Le journal est écrit dans
 - Surveillance non récursive (dossier de premier niveau uniquement).
 - Une pause de 2 s laisse le temps aux gros fichiers de finir d'être écrits.
 
-## Démarrage automatique (Windows)
+## Démarrage automatique (Windows, sans droits admin)
 
-Pour que le surveillant tourne en permanence sans avoir à le lancer à la main :
+- **Installer** : double-clique sur `installer_demarrage.bat`. Il ajoute un petit
+  lanceur dans le dossier Démarrage de Windows : le bot démarre **à chaque
+  ouverture de session**, sans fenêtre, et `lanceur.vbs` le **relance tout seul
+  s'il s'arrête** (plantage, coupure réseau…).
+- **Désinstaller** : double-clique sur `desinstaller_demarrage.bat`.
 
-- **Installer** : double-cliquez sur `installer_demarrage.bat`.
-  Cela crée une tâche planifiée qui démarre le script **à chaque ouverture de
-  session**, en arrière-plan et **sans fenêtre** (via `pythonw.exe`), et le lance
-  immédiatement.
-- **Désinstaller** : double-cliquez sur `desinstaller_demarrage.bat`.
-
-Prérequis : avoir renseigné `TELEGRAM_TOKEN` et `TELEGRAM_CHAT_ID` dans `.env`
-(voir `.env.example`). Si la création de la tâche échoue, relancez le `.bat` en
-tant qu'administrateur (clic droit → Exécuter en tant qu'administrateur).
+Prérequis : `TELEGRAM_TOKEN` et `TELEGRAM_CHAT_ID` renseignés dans `.env`.
 
 ## Mise à jour / arrêt
 

@@ -1,10 +1,12 @@
 @echo off
 chcp 65001 >nul
-set "TASK=TransfertTelegram"
-echo Suppression du demarrage automatique (%TASK%)...
-schtasks /Delete /TN "%TASK%" /F
+set "STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
+echo Suppression du demarrage automatique...
+if exist "%STARTUP%\Assistant Telegram.vbs" del "%STARTUP%\Assistant Telegram.vbs"
+schtasks /Delete /TN "TransfertTelegram" /F >nul 2>&1
+echo Arret du bot...
+powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*mon-assistant*lanceur.vbs*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*mon-assistant*transfert_telegram.py*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
 echo.
-echo Fait. Le script ne demarrera plus automatiquement.
-echo (Une instance deja lancee s'arretera au prochain redemarrage du PC.)
+echo Fait. Le bot ne demarrera plus automatiquement.
 echo.
 pause

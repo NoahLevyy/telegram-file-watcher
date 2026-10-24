@@ -712,7 +712,7 @@ def main():
     except OSError:
         log.warning("Déjà en cours d'exécution : cette nouvelle instance s'arrête.")
         print("L'assistant tourne déjà en arrière-plan. Lance arreter.bat pour l'arrêter d'abord.")
-        return
+        sys.exit(3)  # code 3 = déjà lancé : le lanceur (lanceur.vbs) ne relance pas
 
     app = (Application.builder().token(TOKEN)
            # délais réseau généreux : évite les "Timed out" sur une photo/vidéo un peu lourde
